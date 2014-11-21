@@ -3,10 +3,6 @@
 #include <vector>
 #include <algorithm>
 
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "mspsa430_command.h"
 #include "mspsa430_frame.h"
 #include "mspsa430_calibration.h"
@@ -93,8 +89,8 @@ namespace gr {
 
             if (f->command != frame.command
                     || frame.length != 0x0) {
-                    std::cout <<  __PRETTY_FUNCTION__ << ": error: unable to confirm the message sent" << std::endl;
-                    throw 1;
+                    //std::cout <<  __PRETTY_FUNCTION__ << ": error: unable to confirm the message sent" << std::endl;
+                    return -1;//throw 1;
             }
 
             return 0;
@@ -318,7 +314,7 @@ namespace gr {
 
             bytes = this->flash_read(FLASH_CALIBRATION_DATA_START + sizeof(struct program_header), flash, sizeof(struct calibration_data));
             if (bytes < 0)
-				return;//TODO: error
+				throw 3;//TODO: error
 
             this->calibration_data.format_version = be16toh(*(uint16_t *)flash);
             memcpy(this->calibration_data.calibration_date, (const uint8_t *)&flash[2], 16);
@@ -625,12 +621,11 @@ namespace gr {
     }
 }
 
-    /*
+    //*
     int main(int argc, char *argv[]) {
         std::string information;
         std::string calibration_data;
         std::vector<int8_t> spectrum;
-        ssize_t bytes;
 
         mspsa430_lld_t lld;
         gr::mspsa430::mspsa430 *m = new gr::mspsa430::mspsa430(&lld);
@@ -647,7 +642,8 @@ namespace gr {
 
 		std::cout << "get_spectrum_no_init " << std::endl;
         spectrum = m->get_spectrum_no_init();
-        for (int i=0; i<spectrum.size(); i++) {
+		std::cout << "size: " << spectrum.size() << std::endl;
+        for (size_t i=0; i< spectrum.size(); i++) {
             std::cout << (int)spectrum.at(i) << ", ";
         }
         std::cout << std::endl;
@@ -657,4 +653,4 @@ namespace gr {
 
         return 0;
     }
-    */
+    //*/

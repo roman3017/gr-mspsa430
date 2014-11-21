@@ -33,11 +33,6 @@ namespace gr {
       return gnuradio::get_initial_sptr(new source_impl(path));
     }
 
-    static const int MIN_IN = 0;  /*!< Mininum number of input streams. */
-    static const int MAX_IN = 0;  /*!< Maximum number of input streams. */
-    static const int MIN_OUT = 1; /*!< Minimum number of output streams. */
-    static const int MAX_OUT = 1; /*!< Maximum number of output streams. */
-
     /*
      * The private constructor
      *
@@ -45,11 +40,14 @@ namespace gr {
      */
     source_impl::source_impl(const std::string path)
       : gr::sync_block("mspsa430_source",
-              gr::io_signature::make(MIN_IN, MAX_IN, sizeof(uint8_t)),
-              gr::io_signature::make(MIN_OUT, MAX_OUT, sizeof(uint8_t)))
-    {
+						gr::io_signature::make(0, 0, 0),
+						gr::io_signature::make(1, 1, sizeof(int8_t)))
+   {
+		set_output_multiple(129);
+		set_fixed_rate(129);
         this->m = new mspsa430(&this->lld);
         this->m->connect("/dev/ttyACM0", 921600);
+        std::cout << this->m->get_info() << std::endl;
         this->m->setup();
     }
 
@@ -58,6 +56,7 @@ namespace gr {
      */
     source_impl::~source_impl()
     {
+		std::cout << "disconnect" << std::endl;
         this->m->disconnect();
     }
 
@@ -66,25 +65,27 @@ namespace gr {
 			  gr_vector_const_void_star &input_items,
 			  gr_vector_void_star &output_items)
     {
-        //const int8_t *in = (const int8_t *) input_items[0];
-        int8_t *out = (int8_t *) output_items[0];
-        size_t i = 0;
+        int8_t *out = reinterpret_cast<int8_t *>(output_items[0]);
+        int count = 0;
 
-        // Do <+signal processing+>
-        std::cout << "Nbr output items: " << noutput_items << std::endl;
+        std::cout << "noutput_items: " << noutput_items << std::endl;
+        std::cout << "reminder: " << noutput_items%129 << std::endl;
+
         std::vector<int8_t> spectrum;
+		while (count < noutput_items) {
+			spectrum = this->m->get_spectrum_no_init();
+			//std::cout << "size: " << spectrum.size() << std::endl;
+			if (spectrum.size() < 3) continue;
+			for (size_t i = 0; i < spectrum.size(); i++) {
+				out[count++] = spectrum.at(i);
+				if (count == noutput_items)
+					break;
+			}
+		}
 
-        spectrum = this->m->get_spectrum_no_init();
-
-        for (i=0; i<spectrum.size(); i++) {
-            out[i] = spectrum.at(i);
-        }
-
-        // Tell runtime system how many output items we produced.
-        //return noutput_items;
-        return i;
+        std::cout << "count: " << count << std::endl;
+        return noutput_items;
     }
-
   } /* namespace mspsa430 */
 } /* namespace gr */
 
